@@ -1,73 +1,73 @@
-# Resume-Screening-Bot
-Intelligent ranking tool using TF-IDF and embeddings to score candidates against job descriptions. Deployed via FastAPI &amp; Streamlit.
-Resume Screening Bot
+# React + TypeScript + Vite
 
-An intelligent NLP-based tool that ranks candidate resumes against a job description using TF-IDF Vectorization and Cosine Similarity.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-Architecture
+Currently, two official plugins are available:
 
-Backend: FastAPI (Handles the logic/ML)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-Frontend: Streamlit (Handles the UI and File Uploads)
+## React Compiler
 
-Algorithm: TF-IDF (Term Frequency-Inverse Document Frequency) + Cosine Similarity
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-Setup Instructions
+## Expanding the ESLint configuration
 
-1. Prerequisites
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-Python 3.8 or higher installed.
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-2. Installation
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-Create a virtual environment and install dependencies:
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-# Create virtual env
-python -m venv venv
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-# Activate (Windows)
-venv\Scripts\activate
-# Activate (Mac/Linux)
-source venv/bin/activate
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-# Install requirements
-pip install -r requirements.txt
---
-fastapi
-uvicorn
-streamlit
-scikit-learn
-pydantic
-PyPDF2
-requests
-python-multipart
-----
-
-
-3. Running the Application
-
-You need to run the Backend and Frontend in two separate terminal windows.
-
-Terminal 1: Start Backend (FastAPI)
-
-python main.py
-# Server will start at http://localhost:8000
-
-
-Terminal 2: Start Frontend (Streamlit)
-
-streamlit run app.py
-# Browser will open at http://localhost:8501
-
-
-📝 Usage
-
-Open the Streamlit URL.
-
-Paste a Job Description in the left panel.
-
-Upload one or more Resumes (PDF or TXT) in the right panel.
-
-Click Analyze.
-
-View the ranked list of candidates based on how well their resume text matches the job description keywords.
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
