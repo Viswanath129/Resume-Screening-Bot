@@ -16,6 +16,11 @@ try:
 except LookupError:
     nltk.download('stopwords')
 
+# ⚡ Bolt Optimization: Initialize expensive regex and set lookups once at the module level
+# rather than repeatedly inside clean_text and get_tokens per resume processed.
+STOP_WORDS = set(stopwords.words("english"))
+CLEAN_PATTERN = re.compile(r"[^a-zA-Z\s]")
+
 app = FastAPI(title="Resume Screening Bot")
 
 # CORS Setup
@@ -44,16 +49,17 @@ class AnalysisResponse(BaseModel):
 
 def clean_text(text: str) -> str:
     """Cleans text by removing special characters and lowercasing."""
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    # ⚡ Bolt: Using pre-compiled regex pattern
+    text = CLEAN_PATTERN.sub('', text)
     return text.lower()
 
 def get_tokens(text: str) -> set:
     """Extracts significant tokens/keywords from text."""
-    stop_words = set(stopwords.words('english'))
+    # ⚡ Bolt: Using global STOP_WORDS set
     # Clean and split
     words = clean_text(text).split()
     # Filter stopwords and short words
-    return {word for word in words if word not in stop_words and len(word) > 2}
+    return {word for word in words if word not in STOP_WORDS and len(word) > 2}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_resumes(request: AnalysisRequest):
