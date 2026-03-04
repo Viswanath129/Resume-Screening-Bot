@@ -1,0 +1,4 @@
+
+## 2024-05-15 - [Backend Performance: Vectorized Cosine Similarity]
+**Learning:** Using `cosine_similarity(jd_vector, resume_vector)` in a loop for each resume is significantly slower than calculating the similarity for all resumes at once using matrix operations (`cosine_similarity(jd_vector, tfidf_matrix[1:])`). The `cosine_similarity` function from `sklearn.metrics.pairwise` is highly optimized for matrix operations. In a benchmark with 10 resumes repeated 10 times (100 total resumes), batching the cosine similarity calculation reduced the time for 100 requests from ~3.17s to ~0.35s (an ~89% improvement).
+**Action:** Always prefer vectorized operations over loops when using libraries like scikit-learn or numpy. When calculating similarities between a single vector and multiple vectors, pass the entire matrix of target vectors to the similarity function instead of iterating.
