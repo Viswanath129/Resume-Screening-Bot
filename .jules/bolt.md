@@ -1,0 +1,3 @@
+## 2024-03-24 - [Backend Optimization: Matrix Operations]
+**Learning:** Using scikit-learn's `cosine_similarity` in a loop (calculating 1x1 similarities N times) is extremely inefficient compared to a single vectorized matrix operation (1xN similarity once). Also, repeated fetching of NLTK `stopwords.words('english')` and `re.compile()` inside loops adds significant overhead.
+**Action:** When calculating similarity scores between a single query (like a Job Description) and multiple documents (like Resumes), always pass the full slice of document vectors to `cosine_similarity` instead of iterating. Cache regex compilations and static data (like stopwords) at the module level.

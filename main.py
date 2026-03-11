@@ -16,6 +16,11 @@ try:
 except LookupError:
     nltk.download('stopwords')
 
+# Pre-compile the regex pattern used to clean text for performance
+CLEAN_TEXT_PATTERN = re.compile(r"[^a-zA-Z\s]")
+# Cache the NLTK stopwords set so it is not re-created on each tokenization
+STOP_WORDS = set(stopwords.words("english"))
+
 app = FastAPI(title="Resume Screening Bot")
 
 # CORS Setup
@@ -44,16 +49,16 @@ class AnalysisResponse(BaseModel):
 
 def clean_text(text: str) -> str:
     """Cleans text by removing special characters and lowercasing."""
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    text = CLEAN_TEXT_PATTERN.sub('', text)
     return text.lower()
 
 def get_tokens(text: str) -> set:
     """Extracts significant tokens/keywords from text."""
-    stop_words = set(stopwords.words('english'))
+
     # Clean and split
     words = clean_text(text).split()
     # Filter stopwords and short words
-    return {word for word in words if word not in stop_words and len(word) > 2}
+    return {word for word in words if word not in STOP_WORDS and len(word) > 2}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_resumes(request: AnalysisRequest):
@@ -65,36 +70,36 @@ async def analyze_resumes(request: AnalysisRequest):
 
     # 1. Prepare texts for TF-IDF
     # We will compute similarity between JD and each Resume
-    
+
     # Process keywords for explicit matching/missing lists
     jd_tokens = get_tokens(jd_text)
-    
+
     ranked_resumes = []
-    
+
     # TF-IDF Vectorization
     # We combine JD and all resumes to build the vocabulary
     documents = [jd_text] + [r.text for r in resumes]
-    
+
     try:
         tfidf = TfidfVectorizer(stop_words='english')
         tfidf_matrix = tfidf.fit_transform(documents)
-        
+
         # JD is at index 0
-        jd_vector = tfidf_matrix[0]
-        
-        # Calculate similarities
+        jd_vector = tfidf_matrix[0:1]
+        # Resumes are at index 1 and onwards
+        resume_vectors = tfidf_matrix[1:]
+
+        # Calculate similarities for all resumes at once using vectorized operation
+        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+
         for i, resume in enumerate(resumes):
-            # Resume is at index i + 1
-            resume_vector = tfidf_matrix[i + 1]
-            
-            # Cosine Similarity
-            similarity = cosine_similarity(jd_vector, resume_vector)[0][0]
-            
+            similarity = similarities[i]
+
             # Keyword Analysis
             resume_tokens = get_tokens(resume.text)
             matches = list(jd_tokens.intersection(resume_tokens))
             missing = list(jd_tokens.difference(resume_tokens))
-            
+
             ranked_resumes.append(ResumeData(
                 id=resume.id,
                 name=resume.name,
@@ -103,10 +108,10 @@ async def analyze_resumes(request: AnalysisRequest):
                 matches=matches,
                 missing=missing
             ))
-            
+
         # Sort by score descending
         ranked_resumes.sort(key=lambda x: x.score, reverse=True)
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -128,7 +133,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
             results.append({"name": file.filename, "text": text})
         except:
             results.append({"name": file.filename, "text": "Error decoding file."})
-            
+
     return results
 
 if __name__ == "__main__":
