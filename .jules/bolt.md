@@ -1,0 +1,3 @@
+## 2024-03-13 - Vectorizing cosine_similarity for TfidfMatrix
+**Learning:** Looping over scikit-learn's `cosine_similarity` to calculate similarities one by one is a huge performance bottleneck. `cosine_similarity` handles matrix operations very efficiently; computing similarity of a vector against the entire matrix at once (`tfidf_matrix[1:]`) significantly reduces computation time, bypassing repetitive function overhead and leveraging underlying C implementations.
+**Action:** Always prefer vectorized operations over looping when using scikit-learn metrics. Compute matrix-level comparisons at once rather than vector-by-vector comparisons.
