@@ -83,12 +83,11 @@ async def analyze_resumes(request: AnalysisRequest):
         jd_vector = tfidf_matrix[0]
         
         # Calculate similarities
+        # Optimize by computing cosine similarities in a vectorized manner
+        similarities = cosine_similarity(jd_vector, tfidf_matrix[1:])[0]
         for i, resume in enumerate(resumes):
-            # Resume is at index i + 1
-            resume_vector = tfidf_matrix[i + 1]
-            
             # Cosine Similarity
-            similarity = cosine_similarity(jd_vector, resume_vector)[0][0]
+            similarity = similarities[i]
             
             # Keyword Analysis
             resume_tokens = get_tokens(resume.text)
