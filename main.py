@@ -65,36 +65,36 @@ async def analyze_resumes(request: AnalysisRequest):
 
     # 1. Prepare texts for TF-IDF
     # We will compute similarity between JD and each Resume
-    
+
     # Process keywords for explicit matching/missing lists
     jd_tokens = get_tokens(jd_text)
-    
+
     ranked_resumes = []
-    
+
     # TF-IDF Vectorization
     # We combine JD and all resumes to build the vocabulary
     documents = [jd_text] + [r.text for r in resumes]
-    
+
     try:
         tfidf = TfidfVectorizer(stop_words='english')
         tfidf_matrix = tfidf.fit_transform(documents)
-        
+
         # JD is at index 0
         jd_vector = tfidf_matrix[0]
-        
-        # Calculate similarities
+
+        # Calculate similarities efficiently using vectorized matrix operations
+        # Comparing against tfidf_matrix[1:] at once is significantly faster
+        similarities = cosine_similarity(jd_vector, tfidf_matrix[1:])[0]
+
         for i, resume in enumerate(resumes):
-            # Resume is at index i + 1
-            resume_vector = tfidf_matrix[i + 1]
-            
-            # Cosine Similarity
-            similarity = cosine_similarity(jd_vector, resume_vector)[0][0]
-            
+            # Cosine Similarity (pre-computed)
+            similarity = similarities[i]
+
             # Keyword Analysis
             resume_tokens = get_tokens(resume.text)
             matches = list(jd_tokens.intersection(resume_tokens))
             missing = list(jd_tokens.difference(resume_tokens))
-            
+
             ranked_resumes.append(ResumeData(
                 id=resume.id,
                 name=resume.name,
@@ -103,10 +103,10 @@ async def analyze_resumes(request: AnalysisRequest):
                 matches=matches,
                 missing=missing
             ))
-            
+
         # Sort by score descending
         ranked_resumes.sort(key=lambda x: x.score, reverse=True)
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -128,7 +128,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
             results.append({"name": file.filename, "text": text})
         except:
             results.append({"name": file.filename, "text": "Error decoding file."})
-            
+
     return results
 
 if __name__ == "__main__":
