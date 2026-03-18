@@ -1,0 +1,3 @@
+## 2024-05-24 - [Optimize Tokenization and Vector Similarity]
+**Learning:** In a FastAPI app doing NLP tasks, NLTK `stopwords.words('english')` initialization and `re.compile()` are extremely expensive if called inside loops or inner functions. Similarly, `cosine_similarity` in `sklearn` is optimized for matrix operations and should be called once on slices (`matrix[0:1]` and `matrix[1:]`) rather than in a Python `for` loop.
+**Action:** Always extract regex compilations and constant data loading (like stopwords) to the global module level. Vectorize Scikit-Learn distance calculations to avoid manual iterations over TF-IDF matrices.
