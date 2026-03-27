@@ -36,10 +36,5 @@ jobs:
         run: |
           echo "⚡ Waking up Bolt for the daily performance hunt..."
 
-          # -----------------------------------------------------------------------------------------
-          # INSERT YOUR AGENT CLI COMMAND HERE
-          # Example (if using a hypothetical Jules/Bolt CLI):
-          # npx jules --agent bolt --task "Identify and implement ONE small performance improvement..."
-          # -----------------------------------------------------------------------------------------
-
-          echo "Replace this step with your actual agent execution command."
+          # Execute the Bolt agent to find and implement a performance improvement
+          npx jules --agent bolt --task "Identify and implement ONE small performance improvement that makes the application measurably faster or more efficient. Follow the BOLT process outlined in your instructions."
