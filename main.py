@@ -52,8 +52,9 @@ def clean_text(text: str) -> str:
 
 def get_tokens(text: str) -> set:
     """Extracts significant tokens/keywords from text."""
-    # Using list comprehension inside set constructor is faster
-    return {word for word in clean_text(text).split() if word not in STOP_WORDS and len(word) > 2}
+    # Using set difference is faster than iterating and checking `not in`
+    words = set(clean_text(text).split())
+    return {w for w in (words - STOP_WORDS) if len(w) > 2}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_resumes(request: AnalysisRequest):
@@ -79,13 +80,13 @@ async def analyze_resumes(request: AnalysisRequest):
         tfidf = TfidfVectorizer(stop_words='english')
         tfidf_matrix = tfidf.fit_transform(documents)
 
-        # Calculate cosine similarity using vectorized matrix operations
-        # instead of manual loops
+        # Calculate cosine similarity using dot product directly
+        # since TfidfVectorizer outputs L2 normalized vectors by default.
+        # This is faster than calling cosine_similarity which does extra checks.
         jd_vector = tfidf_matrix[0]
         resume_vectors = tfidf_matrix[1:]
 
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        similarities = (resume_vectors @ jd_vector.T).toarray().ravel()
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
