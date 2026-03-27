@@ -1,0 +1,45 @@
+name: Bolt ⚡ Daily Performance Hunt
+
+on:
+  schedule:
+    # Runs at 08:00 UTC every day
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+jobs:
+  run-bolt-agent:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to create and push branches
+      pull-requests: write # Needed to create PRs
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (Frontend Environment)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python (Backend Environment)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Run Bolt AI Agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }} # Uncomment and set your LLM/Agent provider key here
+        run: |
+          echo "⚡ Waking up Bolt for the daily performance hunt..."
+
+          # -----------------------------------------------------------------------------------------
+          # INSERT YOUR AGENT CLI COMMAND HERE
+          # Example (if using a hypothetical Jules/Bolt CLI):
+          # npx jules --agent bolt --task "Identify and implement ONE small performance improvement..."
+          # -----------------------------------------------------------------------------------------
+
+          echo "Replace this step with your actual agent execution command."
