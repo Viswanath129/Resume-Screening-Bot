@@ -52,8 +52,9 @@ def clean_text(text: str) -> str:
 
 def get_tokens(text: str) -> set:
     """Extracts significant tokens/keywords from text."""
-    # Using list comprehension inside set constructor is faster
-    return {word for word in clean_text(text).split() if word not in STOP_WORDS and len(word) > 2}
+    # Native set operations are faster than list/set comprehensions
+    words = {word for word in clean_text(text).split() if len(word) > 2}
+    return words - STOP_WORDS
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_resumes(request: AnalysisRequest):
@@ -84,8 +85,9 @@ async def analyze_resumes(request: AnalysisRequest):
         jd_vector = tfidf_matrix[0]
         resume_vectors = tfidf_matrix[1:]
 
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        # Direct sparse matrix dot product is faster than scikit-learn's cosine_similarity
+        # as it bypasses internal validation, while computing exact similarities for L2-normalized vectors.
+        similarities = (resume_vectors @ jd_vector.T).toarray().ravel()
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
