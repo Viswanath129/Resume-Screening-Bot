@@ -52,8 +52,10 @@ def clean_text(text: str) -> str:
 
 def get_tokens(text: str) -> set:
     """Extracts significant tokens/keywords from text."""
-    # Using list comprehension inside set constructor is faster
-    return {word for word in clean_text(text).split() if word not in STOP_WORDS and len(word) > 2}
+    # Optimized: Using native set operations (difference) is faster than comprehension with inclusion checks
+    words = set(clean_text(text).split())
+    words.difference_update(STOP_WORDS)
+    return {w for w in words if len(w) > 2}
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_resumes(request: AnalysisRequest):
