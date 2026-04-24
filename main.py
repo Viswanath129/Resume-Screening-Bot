@@ -9,6 +9,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Download NLTK data (if not present)
 try:
@@ -112,7 +115,8 @@ async def analyze_resumes(request: AnalysisRequest):
         ranked_resumes.sort(key=lambda x: x.score, reverse=True)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error analyzing resumes: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
 
     return AnalysisResponse(ranked_resumes=ranked_resumes)
 
