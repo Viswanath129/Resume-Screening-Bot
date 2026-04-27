@@ -1,3 +1,7 @@
 ## 2024-03-24 - Fast NLP and Vectorized Similarities
 **Learning:** In Python processing loops (like `main.py`), NLTK resources (stopwords) and regex patterns (`CLEAN_PATTERN`) initialized at the global (module) level optimize tokenization performance by avoiding repeated intra-function initialization. Additionally, `cosine_similarity` uses vectorized matrix operations (comparing a vector against `tfidf_matrix[1:]` at once) instead of manual loops, significantly speeding up resume similarity scoring. Pre-calculating list data using list comprehensions (e.g., extracting tokens from resume objects) provides a measurable speedup by avoiding iterative attribute lookups.
 **Action:** Always pre-compile regexes and cache heavy resources like NLTK stopwords globally. Always use scikit-learn's native vectorized matrix operations over manual iteration when processing similarities, and pre-extract loop iterations into list comprehensions.
+
+## 2024-04-27 - O(N^2) complexity in state-dependent loops
+**Learning:** In React components like `App.tsx`, calculating a maximum ID or deriving data based on the entire current state inside a file processing loop (e.g., `Math.max(...resumes.map(r => r.id))`) causes the complexity to become O(N*M) where N is the number of existing items and M is the number of new items.
+**Action:** Always pre-calculate derived values from the current state outside of iterative loops when processing bulk actions like file uploads.

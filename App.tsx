@@ -75,11 +75,14 @@ export default function App() {
     const files = event.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    // Bolt optimization: Pre-calculate base ID outside loop to turn O(N*M) into O(N+M)
+    const baseId = resumes.length > 0 ? Math.max(...resumes.map(r => r.id)) : 0;
+
+    Array.from(files).forEach((file, index) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
+        const newId = baseId + index + 1 + Math.floor(Math.random() * 1000);
         setResumes(prev => [...prev, {
           id: newId,
           name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
