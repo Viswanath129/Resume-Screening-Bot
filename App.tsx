@@ -75,11 +75,15 @@ export default function App() {
     const files = event.target.files;
     if (!files) return;
 
+    // Bolt Performance: Pre-calculate max ID outside the loop to change O(N*M) complexity to O(N+M)
+    let maxId = Math.max(...resumes.map(r => r.id), 0);
+
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
+        maxId++;
+        const newId = maxId + Math.floor(Math.random() * 1000);
         setResumes(prev => [...prev, {
           id: newId,
           name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
