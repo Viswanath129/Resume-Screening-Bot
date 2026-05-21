@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -123,14 +124,17 @@ async def upload_files(files: List[UploadFile] = File(...)):
     For this "make it real" version, we might just read text on client
     and send to /analyze, but this adds flexibility for PDF support later.
     """
+    # Performance Optimization: Read all uploaded files concurrently using asyncio.gather
+    # This provides significant I/O performance gains by avoiding sequential blocking
+    contents = await asyncio.gather(*(file.read() for file in files))
+
     results = []
-    for file in files:
-        content = await file.read()
+    for file, content in zip(files, contents):
         try:
             # Basic text decoding, expand for PDF/Docx later if needed
             text = content.decode("utf-8")
             results.append({"name": file.filename, "text": text})
-        except:
+        except Exception:
             results.append({"name": file.filename, "text": "Error decoding file."})
 
     return results
