@@ -85,7 +85,8 @@ async def analyze_resumes(request: AnalysisRequest):
         resume_vectors = tfidf_matrix[1:]
 
         # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        # Using dot product is faster than cosine_similarity because TfidfVectorizer outputs L2-normalized vectors by default
+        similarities = (resume_vectors @ jd_vector.T).toarray().ravel()
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
