@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 from typing import List, Optional
@@ -123,17 +124,20 @@ async def upload_files(files: List[UploadFile] = File(...)):
     For this "make it real" version, we might just read text on client
     and send to /analyze, but this adds flexibility for PDF support later.
     """
-    results = []
-    for file in files:
+    async def process_file(file: UploadFile):
         content = await file.read()
         try:
             # Basic text decoding, expand for PDF/Docx later if needed
             text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
+            return {"name": file.filename, "text": text}
         except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            return {"name": file.filename, "text": "Error decoding file."}
 
-    return results
+    # ⚡ Bolt Optimization: Use asyncio.gather to concurrently read and process
+    # all uploaded files, significantly reducing total response time compared to
+    # blocking the event loop with sequential awaits in a for loop.
+    results = await asyncio.gather(*(process_file(file) for file in files))
+    return list(results)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
