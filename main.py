@@ -84,8 +84,10 @@ async def analyze_resumes(request: AnalysisRequest):
         jd_vector = tfidf_matrix[0]
         resume_vectors = tfidf_matrix[1:]
 
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        # This compares the single jd_vector against all resume_vectors at once.
+        # TF-IDF vectors are L2 normalized, so a direct sparse matrix dot product
+        # equals cosine similarity but is significantly faster by bypassing validation.
+        similarities = (resume_vectors @ jd_vector.T).toarray().ravel()
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
