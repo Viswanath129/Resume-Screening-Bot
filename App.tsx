@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Upload, FileText, BarChart2, CheckCircle, AlertCircle,
-  RefreshCw, Briefcase, User, Plus, X, ChevronDown, ChevronUp, Search
+  RefreshCw, Briefcase, User, Plus, X, ChevronDown, ChevronUp, Search, Download
 } from 'lucide-react';
 import { analyzeResumes, type ResumeData } from './api';
 
@@ -60,15 +60,17 @@ export default function App() {
   // --- Logic: Resume Management ---
 
   const handleAddResume = () => {
-    const newId = Math.max(...resumes.map(r => r.id), 0) + 1;
-    setResumes([...resumes, {
-      id: newId,
-      name: `Candidate ${newId}`,
-      text: "",
-      score: 0,
-      matches: [],
-      missing: []
-    }]);
+    setResumes(prev => {
+      const newId = Math.max(...prev.map(r => r.id), 0) + 1;
+      return [...prev, {
+        id: newId,
+        name: `Candidate ${newId}`,
+        text: "",
+        score: 0,
+        matches: [],
+        missing: []
+      }];
+    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,15 +81,17 @@ export default function App() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
-        setResumes(prev => [...prev, {
-          id: newId,
-          name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-          text: text,
-          score: 0,
-          matches: [],
-          missing: []
-        }]);
+        setResumes(prev => {
+          const newId = Math.max(...prev.map(r => r.id), 0) + 1;
+          return [...prev, {
+            id: newId,
+            name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
+            text: text,
+            score: 0,
+            matches: [],
+            missing: []
+          }];
+        });
       };
       reader.readAsText(file);
     });
@@ -103,6 +107,34 @@ export default function App() {
 
   const toggleExpand = (id: number) => {
     setExpandedResumeId(expandedResumeId === id ? null : id);
+  };
+
+  const handleDownloadCSV = () => {
+    const headers = ["Rank", "Name", "Score", "Matches", "Missing"];
+    const csvRows = [];
+    csvRows.push(headers.join(","));
+
+    resumes.forEach((resume, index) => {
+      const row = [
+        index + 1,
+        `"${resume.name.replace(/"/g, '""')}"`,
+        `${resume.score}%`,
+        `"${resume.matches.map(m => m.replace(/"/g, '""')).join(", ")}"`,
+        `"${resume.missing.map(m => m.replace(/"/g, '""')).join(", ")}"`
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "resume_analysis_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -241,12 +273,21 @@ export default function App() {
         {activeTab === 'results' && (
           <div className="max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
             <div className="bg-slate-900 rounded-3xl p-1 border border-slate-800 shadow-2xl">
-              <div className="p-8 pb-4">
-                <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-                  <BarChart2 className="w-7 h-7 text-indigo-500" />
-                  Analysis Report
-                </h2>
-                <p className="text-slate-400">Ranked based on keyword relevance and semantic similarity to the Job Description.</p>
+              <div className="p-8 pb-4 flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+                    <BarChart2 className="w-7 h-7 text-indigo-500" />
+                    Analysis Report
+                  </h2>
+                  <p className="text-slate-400">Ranked based on keyword relevance and semantic similarity to the Job Description.</p>
+                </div>
+                <button
+                  onClick={handleDownloadCSV}
+                  className="flex items-center gap-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-600/20"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
               </div>
 
               <div className="space-y-2 p-4">
