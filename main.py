@@ -86,7 +86,11 @@ async def analyze_resumes(request: AnalysisRequest):
 
         # This compares the single jd_vector against all resume_vectors at once
         similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+    except ValueError:
+        # Handle empty vocabulary error (e.g. all stop words)
+        similarities = [0.0] * len(resumes)
 
+    try:
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
         resume_tokens_list = [get_tokens(resume.text) for resume in resumes]
