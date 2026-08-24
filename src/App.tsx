@@ -43,6 +43,15 @@ export default function App() {
   // --- Logic: Analysis & Scoring ---
 
   const analyzeData = async () => {
+    if (!jobDescription.trim()) {
+      alert("Please enter a job description.");
+      return;
+    }
+    if (resumes.length === 0) {
+      alert("Please add at least one candidate.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // Call the backend API
@@ -103,6 +112,34 @@ export default function App() {
 
   const toggleExpand = (id: number) => {
     setExpandedResumeId(expandedResumeId === id ? null : id);
+  };
+
+  const exportToCSV = () => {
+    if (resumes.length === 0) return;
+
+    const headers = ['Rank', 'Name', 'Score', 'Matched Keywords', 'Missing Keywords'];
+
+    const rows = resumes.map((r, index) => [
+      index + 1,
+      `"${r.name.replace(/"/g, '""')}"`,
+      r.score || 0,
+      `"${(r.matches || []).join(', ')}"`,
+      `"${(r.missing || []).join(', ')}"`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(e => e.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "resume_analysis_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -241,12 +278,20 @@ export default function App() {
         {activeTab === 'results' && (
           <div className="max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
             <div className="bg-slate-900 rounded-3xl p-1 border border-slate-800 shadow-2xl">
-              <div className="p-8 pb-4">
-                <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-                  <BarChart2 className="w-7 h-7 text-indigo-500" />
-                  Analysis Report
-                </h2>
-                <p className="text-slate-400">Ranked based on keyword relevance and semantic similarity to the Job Description.</p>
+              <div className="p-8 pb-4 flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+                    <BarChart2 className="w-7 h-7 text-indigo-500" />
+                    Analysis Report
+                  </h2>
+                  <p className="text-slate-400">Ranked based on keyword relevance and semantic similarity to the Job Description.</p>
+                </div>
+                <button
+                  onClick={exportToCSV}
+                  className="flex items-center gap-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-600/20"
+                >
+                  Download CSV
+                </button>
               </div>
 
               <div className="space-y-2 p-4">

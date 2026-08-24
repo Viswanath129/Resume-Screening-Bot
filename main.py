@@ -77,18 +77,17 @@ async def analyze_resumes(request: AnalysisRequest):
 
     try:
         tfidf = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = tfidf.fit_transform(documents)
-
-        # Calculate cosine similarity using vectorized matrix operations
-        # instead of manual loops
-        jd_vector = tfidf_matrix[0]
-        resume_vectors = tfidf_matrix[1:]
-
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        try:
+            tfidf_matrix = tfidf.fit_transform(documents)
+            # Calculate cosine similarity using vectorized matrix operations
+            jd_vector = tfidf_matrix[0]
+            resume_vectors = tfidf_matrix[1:]
+            similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        except ValueError:
+            # Handle cases where documents contain only stop words or are empty
+            similarities = [0.0] * len(resumes)
 
         # Pre-calculate list data using list comprehensions for speedup
-        # by avoiding iterative attribute lookups
         resume_tokens_list = [get_tokens(resume.text) for resume in resumes]
 
         for i, resume in enumerate(resumes):
