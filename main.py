@@ -1,4 +1,5 @@
 import os
+import io
 import re
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -9,6 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+import pypdf
 
 # Download NLTK data (if not present)
 try:
@@ -127,11 +129,17 @@ async def upload_files(files: List[UploadFile] = File(...)):
     for file in files:
         content = await file.read()
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if file.filename and file.filename.lower().endswith(".pdf"):
+                reader = pypdf.PdfReader(io.BytesIO(content))
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                results.append({"name": file.filename, "text": text.strip()})
+            else:
+                text = content.decode("utf-8")
+                results.append({"name": file.filename, "text": text})
+        except Exception as e:
+            results.append({"name": file.filename, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
