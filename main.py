@@ -116,6 +116,9 @@ async def analyze_resumes(request: AnalysisRequest):
 
     return AnalysisResponse(ranked_resumes=ranked_resumes)
 
+import io
+from pypdf import PdfReader
+
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
@@ -127,10 +130,18 @@ async def upload_files(files: List[UploadFile] = File(...)):
     for file in files:
         content = await file.read()
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
+            if file.filename and file.filename.lower().endswith(".pdf"):
+                reader = PdfReader(io.BytesIO(content))
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                results.append({"name": file.filename, "text": text})
+            else:
+                # Basic text decoding for txt files
+                text = content.decode("utf-8")
+                results.append({"name": file.filename, "text": text})
+        except Exception as e:
+            print(f"Error reading file {file.filename}: {e}")
             results.append({"name": file.filename, "text": "Error decoding file."})
 
     return results
