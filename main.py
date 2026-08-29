@@ -77,15 +77,19 @@ async def analyze_resumes(request: AnalysisRequest):
 
     try:
         tfidf = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = tfidf.fit_transform(documents)
+        try:
+            tfidf_matrix = tfidf.fit_transform(documents)
 
-        # Calculate cosine similarity using vectorized matrix operations
-        # instead of manual loops
-        jd_vector = tfidf_matrix[0]
-        resume_vectors = tfidf_matrix[1:]
+            # Calculate cosine similarity using vectorized matrix operations
+            # instead of manual loops
+            jd_vector = tfidf_matrix[0]
+            resume_vectors = tfidf_matrix[1:]
 
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+            # This compares the single jd_vector against all resume_vectors at once
+            similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        except ValueError:
+            # Handle empty vocabulary (e.g. only stopwords present)
+            similarities = [0.0] * len(resumes)
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
@@ -116,6 +120,9 @@ async def analyze_resumes(request: AnalysisRequest):
 
     return AnalysisResponse(ranked_resumes=ranked_resumes)
 
+import io
+import pypdf
+
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
@@ -126,12 +133,20 @@ async def upload_files(files: List[UploadFile] = File(...)):
     results = []
     for file in files:
         content = await file.read()
+        filename = file.filename or ""
+        text = ""
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if filename.lower().endswith(".pdf"):
+                pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+                for page in pdf_reader.pages:
+                    extracted = page.extract_text()
+                    if extracted:
+                        text += extracted + "\n"
+            else:
+                text = content.decode("utf-8")
+            results.append({"name": filename, "text": text.strip()})
+        except Exception as e:
+            results.append({"name": filename, "text": f"Error parsing file: {str(e)}"})
 
     return results
 
