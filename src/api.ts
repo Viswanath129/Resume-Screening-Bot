@@ -23,3 +23,22 @@ export const analyzeResumes = async (jobDescription: string, resumes: ResumeData
         throw error;
     }
 };
+
+export const uploadFiles = async (files: FileList): Promise<{name: string, text: string}[]> => {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+    }
+
+    try {
+        const response = await axios.post(`${API_URL}/upload`, formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error uploading files:", error);
+        throw error;
+    }
+};
