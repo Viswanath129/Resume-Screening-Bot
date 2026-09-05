@@ -3,7 +3,7 @@ import {
   Upload, FileText, BarChart2, CheckCircle, AlertCircle,
   RefreshCw, Briefcase, User, Plus, X, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
-import { analyzeResumes, type ResumeData } from './api';
+import { analyzeResumes, uploadFiles, type ResumeData } from './api';
 
 export default function App() {
   const [jobDescription, setJobDescription] = useState("Software Engineer\n\nWe are looking for a Python developer with experience in FastAPI and Machine Learning. Must know SQL and React.");
@@ -71,26 +71,34 @@ export default function App() {
     }]);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
-        setResumes(prev => [...prev, {
-          id: newId,
-          name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-          text: text,
-          score: 0,
-          matches: [],
-          missing: []
-        }]);
-      };
-      reader.readAsText(file);
-    });
+    setIsProcessing(true);
+    try {
+      const parsedFiles = await uploadFiles(files);
+
+      const newResumes = parsedFiles.map((pf) => ({
+        id: Math.floor(Math.random() * 1000000), // Random ID
+        name: pf.name.replace(/\.[^/.]+$/, ""), // Remove extension
+        text: pf.text,
+        score: 0,
+        matches: [],
+        missing: []
+      }));
+
+      setResumes(prev => [...prev, ...newResumes]);
+    } catch (error) {
+      console.error("File upload failed:", error);
+      alert("Failed to extract text from files. Check if backend is running.");
+    } finally {
+      setIsProcessing(false);
+      // Reset input so same file can be uploaded again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const updateResume = (id: number, field: keyof ResumeData, value: string) => {
@@ -173,15 +181,16 @@ export default function App() {
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept=".txt"
+                    accept=".txt,.pdf"
                     multiple
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg transition-colors border border-slate-700"
+                    disabled={isProcessing}
+                    className="flex items-center gap-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
                   >
-                    <Upload className="w-3 h-3" />
-                    Upload .txt
+                    {isProcessing ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    Upload .txt, .pdf
                   </button>
                   <button
                     onClick={handleAddResume}
@@ -230,7 +239,7 @@ export default function App() {
                   <div className="h-full flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
                     <Upload className="w-12 h-12 mb-4 opacity-50" />
                     <p>No candidates added yet</p>
-                    <p className="text-sm opacity-50">Upload .txt files or add manually</p>
+                    <p className="text-sm opacity-50">Upload .txt or .pdf files or add manually</p>
                   </div>
                 )}
               </div>
