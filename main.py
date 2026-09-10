@@ -2,6 +2,8 @@ import os
 import re
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+import io
+from pypdf import PdfReader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -126,12 +128,22 @@ async def upload_files(files: List[UploadFile] = File(...)):
     results = []
     for file in files:
         content = await file.read()
-        try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+        if file.filename.lower().endswith(".pdf"):
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                results.append({"name": file.filename, "text": text.strip()})
+            except Exception as e:
+                results.append({"name": file.filename, "text": f"Error decoding PDF file: {e}"})
+        else:
+            try:
+                # Basic text decoding
+                text = content.decode("utf-8")
+                results.append({"name": file.filename, "text": text})
+            except Exception as e:
+                results.append({"name": file.filename, "text": f"Error decoding file: {e}"})
 
     return results
 
