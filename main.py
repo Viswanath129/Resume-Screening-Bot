@@ -116,22 +116,31 @@ async def analyze_resumes(request: AnalysisRequest):
 
     return AnalysisResponse(ranked_resumes=ranked_resumes)
 
+import io
+import pypdf
+
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
-    Helper endpoint to parse uploaded files on the server if needed.
-    For this "make it real" version, we might just read text on client
-    and send to /analyze, but this adds flexibility for PDF support later.
+    Endpoint to parse uploaded files on the server.
+    Supports both .txt and .pdf files.
     """
     results = []
     for file in files:
         content = await file.read()
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if file.filename.lower().endswith('.pdf'):
+                pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+                text = ""
+                for page in pdf_reader.pages:
+                    text += page.extract_text() or ""
+                results.append({"name": file.filename, "text": text})
+            else:
+                # Basic text decoding for non-pdf files
+                text = content.decode("utf-8")
+                results.append({"name": file.filename, "text": text})
+        except Exception as e:
+            results.append({"name": file.filename, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
