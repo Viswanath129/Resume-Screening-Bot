@@ -9,6 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+from pypdf import PdfReader
+import io
 
 # Download NLTK data (if not present)
 try:
@@ -119,19 +121,33 @@ async def analyze_resumes(request: AnalysisRequest):
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
-    Helper endpoint to parse uploaded files on the server if needed.
-    For this "make it real" version, we might just read text on client
-    and send to /analyze, but this adds flexibility for PDF support later.
+    Helper endpoint to parse uploaded files on the server.
+    Extracts text from .txt and .pdf files.
     """
     results = []
     for file in files:
         content = await file.read()
-        try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+
+        filename = file.filename if file.filename else "unknown"
+        text = ""
+
+        if filename.lower().endswith(".pdf"):
+            try:
+                reader = PdfReader(io.BytesIO(content))
+                for page in reader.pages:
+                    extracted = page.extract_text()
+                    if extracted:
+                        text += extracted + "\n"
+                results.append({"name": filename, "text": text})
+            except Exception as e:
+                results.append({"name": filename, "text": f"Error decoding PDF file: {str(e)}"})
+        else:
+            try:
+                # Basic text decoding for other files (e.g. .txt)
+                text = content.decode("utf-8")
+                results.append({"name": filename, "text": text})
+            except Exception as e:
+                results.append({"name": filename, "text": f"Error decoding text file: {str(e)}"})
 
     return results
 
