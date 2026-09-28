@@ -1,5 +1,6 @@
 import os
 import re
+import io
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+import PyPDF2
 
 # Download NLTK data (if not present)
 try:
@@ -119,19 +121,27 @@ async def analyze_resumes(request: AnalysisRequest):
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
-    Helper endpoint to parse uploaded files on the server if needed.
-    For this "make it real" version, we might just read text on client
-    and send to /analyze, but this adds flexibility for PDF support later.
+    Endpoint to parse uploaded text and pdf files on the server.
     """
     results = []
     for file in files:
         content = await file.read()
+        name = file.filename if file.filename else "unknown"
+        text = ""
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if name.lower().endswith(".pdf"):
+                # Parse PDF
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            else:
+                # Basic text decoding for txt files
+                text = content.decode("utf-8")
+            results.append({"name": name, "text": text})
+        except Exception as e:
+            results.append({"name": name, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
