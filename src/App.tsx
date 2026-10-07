@@ -3,7 +3,7 @@ import {
   Upload, FileText, BarChart2, CheckCircle, AlertCircle,
   RefreshCw, Briefcase, User, Plus, X, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
-import { analyzeResumes, type ResumeData } from './api';
+import { analyzeResumes, uploadFiles, type ResumeData } from './api';
 
 export default function App() {
   const [jobDescription, setJobDescription] = useState("Software Engineer\n\nWe are looking for a Python developer with experience in FastAPI and Machine Learning. Must know SQL and React.");
@@ -71,26 +71,28 @@ export default function App() {
     }]);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
-        setResumes(prev => [...prev, {
+    try {
+      const results = await uploadFiles(files);
+      const newResumes = results.map((result: { name: string, text: string }) => {
+        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000) + Math.floor(Math.random() * 1000);
+        return {
           id: newId,
-          name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-          text: text,
+          name: result.name.replace(/\.[^/.]+$/, ""), // Remove extension
+          text: result.text,
           score: 0,
           matches: [],
           missing: []
-        }]);
-      };
-      reader.readAsText(file);
-    });
+        };
+      });
+      setResumes(prev => [...prev, ...newResumes]);
+    } catch (error) {
+      console.error("Failed to upload files:", error);
+      alert("Failed to upload and parse files. Check backend server.");
+    }
   };
 
   const updateResume = (id: number, field: keyof ResumeData, value: string) => {
@@ -173,7 +175,7 @@ export default function App() {
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept=".txt"
+                    accept=".txt,.pdf"
                     multiple
                   />
                   <button
