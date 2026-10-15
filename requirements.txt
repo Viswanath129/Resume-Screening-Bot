@@ -5,3 +5,5 @@ python-multipart
 nltk
 pydantic
 numpy
+PyPDF2
+python-multipart

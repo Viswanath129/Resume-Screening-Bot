@@ -3,7 +3,7 @@ import {
   Upload, FileText, BarChart2, CheckCircle, AlertCircle,
   RefreshCw, Briefcase, User, Plus, X, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
-import { analyzeResumes, type ResumeData } from './api';
+import { analyzeResumes, uploadFiles, type ResumeData } from './api';
 
 export default function App() {
   const [jobDescription, setJobDescription] = useState("Software Engineer\n\nWe are looking for a Python developer with experience in FastAPI and Machine Learning. Must know SQL and React.");
@@ -71,26 +71,42 @@ export default function App() {
     }]);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const newId = Math.max(...resumes.map(r => r.id), 0) + Math.floor(Math.random() * 1000);
-        setResumes(prev => [...prev, {
-          id: newId,
-          name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-          text: text,
-          score: 0,
-          matches: [],
-          missing: []
-        }]);
-      };
-      reader.readAsText(file);
-    });
+    setIsProcessing(true);
+    try {
+      const uploadedData = await uploadFiles(files);
+
+      setResumes(prev => {
+        const newResumes = [...prev];
+        let maxId = Math.max(...newResumes.map(r => r.id), 0);
+
+        uploadedData.forEach((data: { name: string, text: string }) => {
+          maxId++;
+          newResumes.push({
+            id: maxId,
+            name: data.name.replace(/\.[^/.]+$/, ""),
+            text: data.text,
+            score: 0,
+            matches: [],
+            missing: []
+          });
+        });
+        return newResumes;
+      });
+
+    } catch (error) {
+      console.error("Failed to upload and parse files:", error);
+      alert("Failed to process uploaded files.");
+    } finally {
+      setIsProcessing(false);
+      // clear the input so the same files can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const updateResume = (id: number, field: keyof ResumeData, value: string) => {
@@ -173,7 +189,7 @@ export default function App() {
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept=".txt"
+                    accept=".txt,.pdf"
                     multiple
                   />
                   <button
@@ -230,7 +246,7 @@ export default function App() {
                   <div className="h-full flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
                     <Upload className="w-12 h-12 mb-4 opacity-50" />
                     <p>No candidates added yet</p>
-                    <p className="text-sm opacity-50">Upload .txt files or add manually</p>
+                    <p className="text-sm opacity-50">Upload .txt, .pdf files or add manually</p>
                   </div>
                 )}
               </div>
