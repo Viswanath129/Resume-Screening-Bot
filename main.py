@@ -1,7 +1,9 @@
 import os
+import io
 import re
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+import PyPDF2
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -76,16 +78,20 @@ async def analyze_resumes(request: AnalysisRequest):
     documents = [jd_text] + [r.text for r in resumes]
 
     try:
-        tfidf = TfidfVectorizer(stop_words='english')
-        tfidf_matrix = tfidf.fit_transform(documents)
+        try:
+            tfidf = TfidfVectorizer(stop_words='english')
+            tfidf_matrix = tfidf.fit_transform(documents)
 
-        # Calculate cosine similarity using vectorized matrix operations
-        # instead of manual loops
-        jd_vector = tfidf_matrix[0]
-        resume_vectors = tfidf_matrix[1:]
+            # Calculate cosine similarity using vectorized matrix operations
+            # instead of manual loops
+            jd_vector = tfidf_matrix[0]
+            resume_vectors = tfidf_matrix[1:]
 
-        # This compares the single jd_vector against all resume_vectors at once
-        similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+            # This compares the single jd_vector against all resume_vectors at once
+            similarities = cosine_similarity(jd_vector, resume_vectors)[0]
+        except ValueError:
+            # Handle empty vocabulary case
+            similarities = [0.0] * len(resumes)
 
         # Pre-calculate list data using list comprehensions for speedup
         # by avoiding iterative attribute lookups
@@ -126,12 +132,22 @@ async def upload_files(files: List[UploadFile] = File(...)):
     results = []
     for file in files:
         content = await file.read()
+        filename = file.filename or ""
+
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if filename.lower().endswith(".pdf"):
+                reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text = ""
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            else:
+                text = content.decode("utf-8")
+
+            results.append({"name": filename, "text": text})
+        except Exception as e:
+            results.append({"name": filename, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
