@@ -9,6 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+import io
+import PyPDF2
 
 # Download NLTK data (if not present)
 try:
@@ -119,19 +121,31 @@ async def analyze_resumes(request: AnalysisRequest):
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """
-    Helper endpoint to parse uploaded files on the server if needed.
-    For this "make it real" version, we might just read text on client
-    and send to /analyze, but this adds flexibility for PDF support later.
+    Helper endpoint to parse uploaded files on the server.
+    Supports both .txt and .pdf files.
     """
     results = []
     for file in files:
         content = await file.read()
+        filename = file.filename
+
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
-            results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+            if filename.lower().endswith('.pdf'):
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text = ""
+                for page in pdf_reader.pages:
+                    text += page.extract_text() + "\n"
+
+                # Clean up filename for UI display
+                clean_name = filename.rsplit('.', 1)[0]
+                results.append({"name": clean_name, "text": text.strip()})
+            else:
+                # Fallback to basic text decoding for .txt and others
+                text = content.decode("utf-8")
+                clean_name = filename.rsplit('.', 1)[0]
+                results.append({"name": clean_name, "text": text})
+        except Exception as e:
+            results.append({"name": filename, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
