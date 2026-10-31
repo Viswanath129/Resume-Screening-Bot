@@ -9,6 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.corpus import stopwords
 import uvicorn
+import PyPDF2
+import io
 
 # Download NLTK data (if not present)
 try:
@@ -126,12 +128,22 @@ async def upload_files(files: List[UploadFile] = File(...)):
     results = []
     for file in files:
         content = await file.read()
+        filename = file.filename.lower() if file.filename else ""
+        text = ""
         try:
-            # Basic text decoding, expand for PDF/Docx later if needed
-            text = content.decode("utf-8")
+            if filename.endswith(".pdf"):
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            else:
+                # Basic text decoding for non-PDFs
+                text = content.decode("utf-8")
+
             results.append({"name": file.filename, "text": text})
-        except:
-            results.append({"name": file.filename, "text": "Error decoding file."})
+        except Exception as e:
+            results.append({"name": file.filename, "text": f"Error decoding file: {str(e)}"})
 
     return results
 
